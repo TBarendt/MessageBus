@@ -21,7 +21,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //------------------------------------------------------------------------------
-using System.Collections.Generic;
+using System;
 using System.Diagnostics;
 
 //------------------------------------------------------------------------------
@@ -65,8 +65,8 @@ public class MessageBus
 	// Use GetDispatcher for scoped dispatching
 	//
 	//--------------------------------------------------------------------------
-	public static void Dispatch<MessageType>(params object[] args) where MessageType : System.Delegate => instance.Internal_DispatchEvent(typeof(MessageType).GetHashCode(), args);
-	public static void Dispatch(System.Type messageType, params object[] args) => instance.Internal_DispatchEvent(messageType.GetHashCode(), args);
+	public static void Dispatch<MessageType>(params object[] args) where MessageType : Delegate => instance.Internal_DispatchEvent(typeof(MessageType).GetHashCode(), args);
+	public static void Dispatch(Type messageType, params object[] args) => instance.Internal_DispatchEvent(messageType.GetHashCode(), args);
 	private void Internal_DispatchEvent(int type, params object[] args)
 	{
 		if(!m_scopes.ContainsKey(""))Internal_GetDispatcher("");
@@ -76,9 +76,9 @@ public class MessageBus
 	//--------------------------------------------------------------------------
 	// Subscribe
 	//--------------------------------------------------------------------------
-	public static void Subscribe<MessageType>(MessageType subscriber) where MessageType : System.Delegate => instance.Internal_Subscribe("", subscriber);
-	public static void Subscribe<MessageType>(string scope, MessageType subscriber) where MessageType : System.Delegate => instance.Internal_Subscribe(scope, subscriber);
-	private void Internal_Subscribe<MessageType>(string scope, MessageType subscriber) where MessageType : System.Delegate
+	public static void Subscribe<MessageType>(MessageType subscriber) where MessageType : Delegate => instance.Internal_Subscribe("", subscriber);
+	public static void Subscribe<MessageType>(string scope, MessageType subscriber) where MessageType : Delegate => instance.Internal_Subscribe(scope, subscriber);
+	private void Internal_Subscribe<MessageType>(string scope, MessageType subscriber) where MessageType : Delegate
 	{
 		if(!m_scopes.ContainsKey(scope))Internal_GetDispatcher(scope);
 		m_scopes[scope].Subscribe(subscriber);
@@ -87,9 +87,9 @@ public class MessageBus
 	//--------------------------------------------------------------------------
 	// Unsubscribe
 	//--------------------------------------------------------------------------
-	public static void Unsubscribe<MessageType>(MessageType subscriber) where MessageType : System.Delegate => instance.Internal_Unsubscribe("", subscriber);
-	public static void Unsubscribe<MessageType>(string scope, MessageType subscriber) where MessageType : System.Delegate => instance.Internal_Unsubscribe(scope, subscriber);
-	private void Internal_Unsubscribe<MessageType>(string scope, MessageType subscriber) where MessageType : System.Delegate
+	public static void Unsubscribe<MessageType>(MessageType subscriber) where MessageType : Delegate => instance.Internal_Unsubscribe("", subscriber);
+	public static void Unsubscribe<MessageType>(string scope, MessageType subscriber) where MessageType : Delegate => instance.Internal_Unsubscribe(scope, subscriber);
+	private void Internal_Unsubscribe<MessageType>(string scope, MessageType subscriber) where MessageType : Delegate
 	{
 		if(!m_scopes.ContainsKey(scope))return ;
 		m_scopes[scope].Unsubscribe(subscriber);
@@ -104,10 +104,10 @@ public class MessageBus
 //------------------------------------------------------------------------------
 public interface IMessageDispatcher
 {
-	public void Dispatch<MessageType>(params object[] args) where MessageType : System.Delegate;
-	public void Dispatch(System.Type messageType, params object[] args);
-	public void Subscribe<MessageType>(MessageType subscriber) where MessageType : System.Delegate;
-	public void Unsubscribe<MessageType>(MessageType subscriber) where MessageType : System.Delegate;
+	public void Dispatch<MessageType>(params object[] args) where MessageType : Delegate;
+	public void Dispatch(Type messageType, params object[] args);
+	public void Subscribe<MessageType>(MessageType subscriber) where MessageType : Delegate;
+	public void Unsubscribe<MessageType>(MessageType subscriber) where MessageType : Delegate;
 }
 
 //------------------------------------------------------------------------------
@@ -124,11 +124,11 @@ public class MessageDispatcher : IMessageDispatcher
 
 	//--------------------------------------------------------------------------
 	// Subscribers
-	private Dictionary<int, HashSet<System.Delegate>> m_subscribers = new();
+	private Dictionary<int, HashSet<Delegate>> m_subscribers = new();
 
 	//--------------------------------------------------------------------------
 	// Cache
-	private List<System.Delegate> m_delegateList = new(8);
+	private List<Delegate> m_delegateList = new(8);
 
 	//--------------------------------------------------------------------------
 	// Constructor
@@ -141,32 +141,32 @@ public class MessageDispatcher : IMessageDispatcher
 	//--------------------------------------------------------------------------
 	// Subscribe
 	//--------------------------------------------------------------------------
-	public void Subscribe<MessageType>(MessageType subscriber) where MessageType : System.Delegate
+	public void Subscribe<MessageType>(MessageType subscriber) where MessageType : Delegate
 	{
 		// Find message type set
 		int type = subscriber.GetType().GetHashCode();
 		if(!m_subscribers.TryGetValue(type, out var messageSet))
 		{
 			// First time we see this message type, create a new set
-			messageSet = new HashSet<System.Delegate>();
+			messageSet = new HashSet<Delegate>();
 			m_subscribers[type] = messageSet;
 		}
 
 		// Add listener
-		Debug.Assert(!messageSet.Contains(subscriber as System.Delegate), "Listener added twice! [" + subscriber.GetType() + "]");
-		messageSet.Add(subscriber as System.Delegate);
+		Debug.Assert(!messageSet.Contains(subscriber as Delegate), "Listener added twice! [" + subscriber.GetType() + "]");
+		messageSet.Add(subscriber as Delegate);
 	}
 
 	//--------------------------------------------------------------------------
 	// Unsubscribe
 	//--------------------------------------------------------------------------
-	public void Unsubscribe<MessageType>(MessageType subscriber) where MessageType : System.Delegate
+	public void Unsubscribe<MessageType>(MessageType subscriber) where MessageType : Delegate
 	{
 		// Find message type set
 		int type = subscriber.GetType().GetHashCode();
 		if(m_subscribers.TryGetValue(type, out var messageSet))
 		{
-			messageSet.Remove(subscriber as System.Delegate);
+			messageSet.Remove(subscriber as Delegate);
 			if(messageSet.Count == 0)
 				m_subscribers.Remove(type);
 		}
@@ -175,8 +175,8 @@ public class MessageDispatcher : IMessageDispatcher
 	//--------------------------------------------------------------------------
 	// DispatchEvent
 	//--------------------------------------------------------------------------
-	public void Dispatch<MessageType>(params object[] args) where MessageType : System.Delegate => Internal_DispatchEvent(typeof(MessageType).GetHashCode(), args);
-	public void Dispatch(System.Type messageType, params object[] args) => Internal_DispatchEvent(messageType.GetHashCode(), args);
+	public void Dispatch<MessageType>(params object[] args) where MessageType : Delegate => Internal_DispatchEvent(typeof(MessageType).GetHashCode(), args);
+	public void Dispatch(Type messageType, params object[] args) => Internal_DispatchEvent(messageType.GetHashCode(), args);
 	public void Dispatch(int type, params object[] args) => Internal_DispatchEvent(type, args);
 	private void Internal_DispatchEvent(int type, params object[] args)
 	{
@@ -185,7 +185,7 @@ public class MessageDispatcher : IMessageDispatcher
 			if(messageSet.Count > 0)
 			{
 				m_delegateList.Clear();
-				foreach(System.Delegate dg in messageSet)m_delegateList.Add(dg);
+				foreach(Delegate dg in messageSet)m_delegateList.Add(dg);
 
 				for(int i = 0; i < m_delegateList.Count; i++)
 				{
@@ -193,7 +193,7 @@ public class MessageDispatcher : IMessageDispatcher
 					{
 						m_delegateList[i].Method.Invoke(m_delegateList[i].Target, args);
 					}
-					catch(System.Exception e)
+					catch(Exception e)
 					{
 						Debug.Assert(false, "Error dispatching message: " + e.Message);
 					}
