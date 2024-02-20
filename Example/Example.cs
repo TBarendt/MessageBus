@@ -28,7 +28,7 @@ public class Example
 	// Messages
 	public delegate void ExampleMessage();
 	public delegate void ExampleArguments(int x, int y);
-	
+
 	//--------------------------------------------------------------------------
 	// Constructor
 	//--------------------------------------------------------------------------
@@ -40,7 +40,9 @@ public class Example
 		// Example on how to use it with a scope
 		ScopedExample();
 
-		
+		// Example showing weak references
+		WeakExample();
+
 	}
 
 	//--------------------------------------------------------------------------
@@ -52,7 +54,6 @@ public class Example
 		// Subscribe to a few messages
 		MessageBus.Subscribe<ExampleMessage>(OnExampleMessage);
 		MessageBus.Subscribe<ExampleArguments>(OnExampleArguments);
-
 
 		//----------------------------------------------------------------------
 		// Dispatch messages
@@ -89,7 +90,7 @@ public class Example
 		MessageBus.Unsubscribe<ExampleMessage>("ExampleScope", OnExampleMessage);
 		MessageBus.Unsubscribe<ExampleArguments>("ExampleScope", OnExampleArguments);
 	}
-
+	
 	//--------------------------------------------------------------------------
 	// OnExampleMessage
 	//--------------------------------------------------------------------------
@@ -104,5 +105,54 @@ public class Example
 	private void OnExampleArguments(int x, int y)
 	{
 		Console.WriteLine("ExampleArguments with " + x + " and " + y);
+	}
+
+	//--------------------------------------------------------------------------
+	// WeakExample
+	//--------------------------------------------------------------------------
+	private void WeakExample()
+	{
+		//----------------------------------------------------------------------
+		// Subscribe 
+		SubscribeWeak();
+
+		//----------------------------------------------------------------------
+		// Dispatch messages
+		MessageBus.Dispatch<ExampleMessage>();
+		
+		//----------------------------------------------------------------------
+		// Force garbage collection
+		GC.Collect();
+
+		//----------------------------------------------------------------------
+		// Dispatch messages
+		MessageBus.Dispatch<ExampleMessage>();
+	}
+
+	//--------------------------------------------------------------------------
+	// SubscribeWeak
+	//--------------------------------------------------------------------------
+	private void SubscribeWeak()
+	{
+		WeakExample weakExample = new WeakExample();
+		MessageBus.Subscribe<ExampleMessage>(weakExample.OnExampleMessage);
+	}
+}
+
+public class WeakExample
+{
+	//--------------------------------------------------------------------------
+	// Destructor
+	//--------------------------------------------------------------------------
+	~WeakExample()
+	{
+		Console.WriteLine("Weak: Destructor");
+	}
+	//--------------------------------------------------------------------------
+	// OnExampleMessage
+	//--------------------------------------------------------------------------
+	public void OnExampleMessage()
+	{
+		Console.WriteLine("Weak: OnExampleMessage");
 	}
 }

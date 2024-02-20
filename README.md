@@ -1,10 +1,11 @@
 # MessageBus
-A C# scoped message bus system that is lightweight, type safe and easy to use
+A C# scoped message bus system that is lightweight, type safe and easy to use.
+
 
 ---
 
 ## Install
-This is a single file library, place <B>MessageBus/MessageBus.cs</B> any where in your project
+This is a single file library, place <B>MessageBus/MessageBus.cs</B> any where in your project.
 
 
 ---
@@ -59,6 +60,14 @@ Dispatch messages
 MessageBus.Dispatch<MyMessages.LogText>("Hello world!");
 
 ```
+
+<B>Step #5</B> 
+Unsubscribe from messages
+```
+MessageBus.Unsubscribe<MyMessages.LogText>(OnLogText);
+```
+> Subscriptions are kept as WeakReferences so if the subscriber gets finalized the subscription is automatically removed.
+
 ---
 ## Usage with scope
 To subscribe to a scoped message bus, use a string for the scope
