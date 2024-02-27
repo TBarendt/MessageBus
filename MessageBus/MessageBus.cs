@@ -23,6 +23,7 @@
 //------------------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Diagnostics;
 
 //------------------------------------------------------------------------------
@@ -125,11 +126,12 @@ public class MessageDispatcher : IMessageDispatcher
 
 	//--------------------------------------------------------------------------
 	// Subscribers
-	private Dictionary<int, Dictionary<int, WeakReference>> m_subscribers = new();
+	private Dictionary<int, Dictionary<int, Tuple<WeakReference, MethodInfo>>> m_subscribers = new();
 
 	//--------------------------------------------------------------------------
 	// Cache
-	private List<Delegate> m_delegateList = new(8);
+	private List<Object> m_targetList = new(8);
+	private List<MethodInfo> m_methodList = new(8);
 	private List<int> m_cleanupList = new(8);
 
 	//--------------------------------------------------------------------------
@@ -150,14 +152,14 @@ public class MessageDispatcher : IMessageDispatcher
 		if(!m_subscribers.TryGetValue(type, out var messageSet))
 		{
 			// First time we see this message type, create a new set
-			messageSet = new Dictionary<int, WeakReference>();
+			messageSet = new Dictionary<int, Tuple<WeakReference, MethodInfo>>();
 			m_subscribers[type] = messageSet;
 		}
 
 		// Add listener
 		int subscriberHash = subscriber.GetHashCode();
 		Debug.Assert(!messageSet.ContainsKey(subscriberHash), "Listener added twice! [" + subscriber.GetType() + "]");
-		messageSet.Add(subscriberHash, new WeakReference(subscriber));
+		messageSet.Add(subscriberHash, new Tuple<WeakReference, MethodInfo>(new WeakReference(subscriber.Target), subscriber.Method));
 	}
 
 	//--------------------------------------------------------------------------
@@ -190,10 +192,13 @@ public class MessageDispatcher : IMessageDispatcher
 			{
 				foreach(var pair in messageSet)
 				{
-					var reference = pair.Value;
-					var dg = reference.Target as Delegate;
-					if(reference.IsAlive && dg != null)
-						m_delegateList.Add(dg);
+					var target = pair.Value.Item1;
+					var method = pair.Value.Item2;
+					if(target.IsAlive && target.Target != null && method != null)
+					{
+						m_targetList.Add(target.Target);
+						m_methodList.Add(method);
+					}
 					else
 						m_cleanupList.Add(pair.Key);
 				}
@@ -203,11 +208,11 @@ public class MessageDispatcher : IMessageDispatcher
 					m_subscribers.Remove(type);
 
 
-				for(int i = 0; i < m_delegateList.Count; i++)
+				for(int i = 0; i < m_targetList.Count; i++)
 				{
 					try
 					{
-						m_delegateList[i].Method.Invoke(m_delegateList[i].Target, args);
+						m_methodList[i].Invoke(m_targetList[i], args);
 					}
 					catch(Exception e)
 					{
@@ -215,7 +220,8 @@ public class MessageDispatcher : IMessageDispatcher
 					}
 				}
 
-				m_delegateList.Clear();
+				m_targetList.Clear();
+				m_methodList.Clear();
 				m_cleanupList.Clear();
 			}
 		}
