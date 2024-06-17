@@ -174,7 +174,7 @@ public class MessageDispatcher : IMessageDispatcher
 			int subscriberHash = subscriber.GetHashCode();
 			messageSet.Remove(subscriberHash);
 			if(messageSet.Count == 0)
-				m_subscribers.Remove(subscriber.GetHashCode());
+				m_subscribers.Remove(type);
 		}
 	}
 	
