@@ -158,7 +158,15 @@ public class MessageDispatcher : IMessageDispatcher
 
 		// Add listener
 		int subscriberHash = subscriber.GetHashCode();
-		Debug.Assert(!messageSet.ContainsKey(subscriberHash), "Listener added twice! [" + subscriber.GetType() + "]");
+		if(messageSet.TryGetValue(subscriberHash, out var existingListener))
+		{
+			// If there is already a subscriber, check if it the old one is still alive and if not remove it
+			if(!existingListener.Item1.IsAlive || existingListener.Item2 == null)
+				messageSet.Remove(subscriberHash);
+			else
+				Debug.Assert(false, "Listener added twice! [" + subscriber.GetType() + "]");
+		}
+
 		messageSet.Add(subscriberHash, new Tuple<WeakReference, MethodInfo>(new WeakReference(subscriber.Target), subscriber.Method));
 	}
 
