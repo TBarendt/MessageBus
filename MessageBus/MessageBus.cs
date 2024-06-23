@@ -130,9 +130,10 @@ public class MessageDispatcher : IMessageDispatcher
 
 	//--------------------------------------------------------------------------
 	// Cache
-	private List<Object> m_targetList = new(8);
-	private List<MethodInfo> m_methodList = new(8);
-	private List<int> m_cleanupList = new(8);
+	private int m_stackCounter = 0;
+	private List<List<Object>> m_targetList = new();
+	private List<List<MethodInfo>> m_methodList = new();
+	private List<List<int>> m_cleanupList = new();
 
 	//--------------------------------------------------------------------------
 	// Constructor
@@ -198,29 +199,42 @@ public class MessageDispatcher : IMessageDispatcher
 		{
 			if(messageSet.Count > 0)
 			{
+				if(m_stackCounter == m_targetList.Count)
+				{
+					m_targetList.Add(new List<Object>(8));
+					m_methodList.Add(new List<MethodInfo>(8));
+					m_cleanupList.Add(new List<int>(8));
+				}
+
+				var targets = m_targetList[m_stackCounter];
+				var methods = m_methodList[m_stackCounter];
+				var cleanup = m_cleanupList[m_stackCounter];
+				m_stackCounter++;
+				
+
 				foreach(var pair in messageSet)
 				{
 					var target = pair.Value.Item1;
 					var method = pair.Value.Item2;
-					if(target.IsAlive && target.Target != null && method != null)
+					if(target.IsAlive && method != null)
 					{
-						m_targetList.Add(target.Target);
-						m_methodList.Add(method);
+						targets.Add(target.Target);
+						methods.Add(method);
 					}
 					else
-						m_cleanupList.Add(pair.Key);
+						cleanup.Add(pair.Key);
 				}
-				foreach(int key in m_cleanupList)
+				foreach(int key in cleanup)
 					messageSet.Remove(key);
 				if(messageSet.Count == 0)
 					m_subscribers.Remove(type);
 
 
-				for(int i = 0; i < m_targetList.Count; i++)
+				for(int i = 0; i < targets.Count; i++)
 				{
 					try
 					{
-						m_methodList[i].Invoke(m_targetList[i], args);
+						methods[i].Invoke(targets[i], args);
 					}
 					catch(Exception e)
 					{
@@ -228,9 +242,10 @@ public class MessageDispatcher : IMessageDispatcher
 					}
 				}
 
-				m_targetList.Clear();
-				m_methodList.Clear();
-				m_cleanupList.Clear();
+				targets.Clear();
+				methods.Clear();
+				cleanup.Clear();
+				m_stackCounter--;
 			}
 		}
 	}
